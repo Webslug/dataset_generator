@@ -95,6 +95,71 @@ templates.json                  Saved prompt templates (created on first save)
 docs/dataset-generator-suggestions.md   Running log of feature ideas/decisions
 ```
 
+## HTTP API (for scripting)
+
+The UI is just a client of the same HTTP API you can call directly — useful
+for feeding this tool from another script instead of the browser.
+
+### Single entry — `POST /api/generate`
+
+```bash
+curl -s http://127.0.0.1:8942/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "/path/to/dataset.json",
+    "prompt": "Explain photosynthesis in one sentence.",
+    "model": "qwen35:latest",
+    "backend": "ollama",
+    "max_tokens": 300
+  }'
+```
+
+Key fields: `filename`, `prompt` (both required), `model`, `backend`
+(`ollama` / `kobold` / `openai`), `max_tokens`, `system`, `context` (prior
+turns, `[{"role":...,"content":...}]`), `temperature`, `top_p`, `seed`,
+`allow_duplicate`, and for the `openai` backend `openai_base_url`,
+`openai_api_key`, `openai_model`. Returns `409` with `"duplicate": true` if
+the exact prompt already exists in the file and `allow_duplicate` isn't set.
+
+### Bulk — `POST /api/generate/bulk`
+
+Appends many entries to one dataset file in a single request and a single
+disk write — for scripting a whole corpus in one call instead of one HTTP
+round-trip per entry.
+
+```bash
+curl -s http://127.0.0.1:8942/api/generate/bulk \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "/path/to/dataset.jsonl",
+    "model": "qwen35:latest",
+    "backend": "ollama",
+    "max_tokens": 300,
+    "entries": [
+      "Write a haiku about rain.",
+      "Write a haiku about the ocean.",
+      {"prompt": "Already have this one.", "response": "Pre-written answer — no model call made for this entry."}
+    ]
+  }'
+```
+
+- `filename` and a non-empty `entries` array are required.
+- Each item in `entries` is either a plain string (used as the prompt, sent
+  to the backend to generate a response) or an object. An object can include
+  a `"response"` key — if present, that entry is appended as-is and **no
+  backend call is made for it** (for importing already-written pairs).
+- Any of `model` / `backend` / `max_tokens` / `system` / `temperature` /
+  `top_p` / `seed` / `openai_base_url` / `openai_api_key` / `openai_model` at
+  the top level are defaults; an object entry can override any of them just
+  for itself.
+- `allow_duplicate` (default `false`) and `stop_on_error` (default `false`,
+  meaning a failed entry is skipped and the rest still run) both apply to
+  the whole batch.
+- Response: `{"ok": true, "results": [...one per entry...], "appended": N,
+  "skipped_duplicates": N, "failed": N, "total_entries": N}`. Each entry in
+  `results` is `{"ok": true, "entry": {...}}` or `{"ok": false, "error":
+  "...", "duplicate": true?}`, in the same order as the input.
+
 ## Configuring which Ollama models appear
 
 Two constants near the top of `app.py` control the model dropdown:

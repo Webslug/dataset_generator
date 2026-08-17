@@ -387,8 +387,53 @@ def first_user_content(entry):
 
 
 # ============================================================
-# Generation endpoint
+# Generation endpoints
 # ============================================================
+
+def generate_response_text(
+    backend, model, prompt, system_prompt, context, max_tokens,
+    temperature, top_p, seed, openai_base_url, openai_api_key, openai_model,
+):
+    """Call the configured backend and return the generated text.
+
+    Raises ValueError for a missing required field for the chosen backend
+    (caller turns this into a 400), or requests.RequestException on a
+    network/backend failure (caller turns this into a 502). Shared by the
+    single-entry and bulk generation endpoints so there's one place that
+    knows how each backend's request is shaped.
+    """
+    if backend == "openai":
+        if not openai_base_url:
+            raise ValueError("base URL is required for the OpenAI-compatible backend")
+        if not openai_model:
+            raise ValueError("model name is required for the OpenAI-compatible backend")
+        chat_messages = []
+        if system_prompt:
+            chat_messages.append({"role": "system", "content": system_prompt})
+        chat_messages.extend(context)
+        chat_messages.append({"role": "user", "content": prompt})
+        return query_openai_compatible(
+            openai_base_url, openai_api_key, openai_model, chat_messages, max_tokens, temperature, top_p
+        )
+    if backend == "kobold":
+        full_prompt = build_flat_prompt(system_prompt, context, prompt)
+        return query_kobold(full_prompt, max_tokens, temperature, top_p, seed)
+    if not model:
+        raise ValueError("model is required for ollama")
+    full_prompt = build_flat_prompt(system_prompt, context, prompt)
+    return query_ollama(model, full_prompt, max_tokens, temperature, top_p, seed)
+
+
+def build_entry(prompt, response_text, system_prompt, context):
+    messages = list(context) + [
+        {"role": "user", "content": prompt},
+        {"role": "assistant", "content": response_text},
+    ]
+    entry = {"messages": messages}
+    if system_prompt:
+        entry["system"] = system_prompt
+    return entry
+
 
 @app.route("/api/generate", methods=["POST"])
 def api_generate():
@@ -424,41 +469,151 @@ def api_generate():
             return jsonify({"ok": False, "duplicate": True, "error": "This prompt already exists in the dataset."}), 409
 
     try:
-        if backend == "openai":
-            if not openai_base_url:
-                return jsonify({"ok": False, "error": "base URL is required for the OpenAI-compatible backend"}), 400
-            if not openai_model:
-                return jsonify({"ok": False, "error": "model name is required for the OpenAI-compatible backend"}), 400
-            chat_messages = []
-            if system_prompt:
-                chat_messages.append({"role": "system", "content": system_prompt})
-            chat_messages.extend(context)
-            chat_messages.append({"role": "user", "content": prompt})
-            response_text = query_openai_compatible(
-                openai_base_url, openai_api_key, openai_model, chat_messages, max_tokens, temperature, top_p
-            )
-        elif backend == "kobold":
-            full_prompt = build_flat_prompt(system_prompt, context, prompt)
-            response_text = query_kobold(full_prompt, max_tokens, temperature, top_p, seed)
-        else:
-            if not model:
-                return jsonify({"ok": False, "error": "model is required for ollama"}), 400
-            full_prompt = build_flat_prompt(system_prompt, context, prompt)
-            response_text = query_ollama(model, full_prompt, max_tokens, temperature, top_p, seed)
+        response_text = generate_response_text(
+            backend, model, prompt, system_prompt, context, max_tokens,
+            temperature, top_p, seed, openai_base_url, openai_api_key, openai_model,
+        )
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
     except requests.RequestException as e:
         return jsonify({"ok": False, "error": f"backend request failed: {e}"}), 502
 
-    messages = list(context) + [
-        {"role": "user", "content": prompt},
-        {"role": "assistant", "content": response_text},
-    ]
-    entry = {"messages": messages}
-    if system_prompt:
-        entry["system"] = system_prompt
-
+    entry = build_entry(prompt, response_text, system_prompt, context)
     total_entries = append_entry(path, entry, existing=existing)
 
     return jsonify({"ok": True, "entry": entry, "total_entries": total_entries})
+
+
+@app.route("/api/generate/bulk", methods=["POST"])
+def api_generate_bulk():
+    """Append many entries to a dataset file in one request.
+
+    Body:
+      filename: target .json/.jsonl file (required)
+      entries: non-empty list, each item either:
+        - a plain string, treated as a prompt to generate a response for, or
+        - an object {"prompt": ..., "response": ...?, "system": ...?,
+          "context": [...]?, "model"/"backend"/"max_tokens"/"temperature"/
+          "top_p"/"seed"/"openai_*": ...?} — any field here overrides the
+          request-level default of the same name for this entry only.
+          If "response" is present, no backend is called for that entry —
+          it's appended as-is (useful for importing already-written pairs).
+      Any of model/backend/max_tokens/system/temperature/top_p/seed/
+      openai_base_url/openai_api_key/openai_model/allow_duplicate at the
+      top level act as defaults for entries that don't override them.
+      stop_on_error: if true, stop processing on the first failed entry
+      instead of continuing with the rest (default false).
+
+    The whole batch is written to disk in a single write, and the
+    duplicate-prompt check (when enabled) is done against one in-memory
+    copy of the dataset shared across the batch, rather than re-reading
+    the file per entry.
+    """
+    data = request.get_json(force=True)
+    filename = (data.get("filename") or "").strip()
+    entries_in = data.get("entries")
+
+    if not filename:
+        return jsonify({"ok": False, "error": "filename is required"}), 400
+    if not isinstance(entries_in, list) or not entries_in:
+        return jsonify({"ok": False, "error": "entries must be a non-empty list"}), 400
+
+    default_model = data.get("model") or ""
+    default_backend = data.get("backend") or "ollama"
+    default_max_tokens = int(data.get("max_tokens") or 450)
+    default_system = (data.get("system") or "").strip()
+    default_temperature = data.get("temperature")
+    default_top_p = data.get("top_p")
+    default_seed = data.get("seed")
+    default_openai_base_url = (data.get("openai_base_url") or "").strip()
+    default_openai_api_key = (data.get("openai_api_key") or "").strip()
+    default_openai_model = (data.get("openai_model") or "").strip()
+    allow_duplicate = bool(data.get("allow_duplicate"))
+    stop_on_error = bool(data.get("stop_on_error"))
+
+    path = Path(filename).expanduser()
+    existing = read_dataset(path)
+    seen_prompts = None if allow_duplicate else {first_user_content(e) for e in existing}
+
+    results = []
+    appended = 0
+    skipped_duplicates = 0
+    failed = 0
+
+    for raw in entries_in:
+        if isinstance(raw, str):
+            item = {"prompt": raw}
+        elif isinstance(raw, dict):
+            item = raw
+        else:
+            results.append({"ok": False, "error": "each entry must be a string or an object"})
+            failed += 1
+            if stop_on_error:
+                break
+            continue
+
+        prompt = (item.get("prompt") or "").strip()
+        if not prompt:
+            results.append({"ok": False, "error": "prompt is required"})
+            failed += 1
+            if stop_on_error:
+                break
+            continue
+
+        if seen_prompts is not None and prompt in seen_prompts:
+            results.append({"ok": False, "duplicate": True, "error": "duplicate prompt"})
+            skipped_duplicates += 1
+            continue
+
+        context = item.get("context") or []
+        system_prompt = item.get("system", default_system) or ""
+        response_text = item.get("response")
+
+        if response_text is None:
+            try:
+                response_text = generate_response_text(
+                    item.get("backend") or default_backend,
+                    item.get("model") or default_model,
+                    prompt, system_prompt, context,
+                    int(item.get("max_tokens") or default_max_tokens),
+                    item.get("temperature", default_temperature),
+                    item.get("top_p", default_top_p),
+                    item.get("seed", default_seed),
+                    item.get("openai_base_url") or default_openai_base_url,
+                    item.get("openai_api_key") or default_openai_api_key,
+                    item.get("openai_model") or default_openai_model,
+                )
+            except ValueError as e:
+                results.append({"ok": False, "error": str(e)})
+                failed += 1
+                if stop_on_error:
+                    break
+                continue
+            except requests.RequestException as e:
+                results.append({"ok": False, "error": f"backend request failed: {e}"})
+                failed += 1
+                if stop_on_error:
+                    break
+                continue
+
+        entry = build_entry(prompt, response_text, system_prompt, context)
+        existing.append(entry)
+        if seen_prompts is not None:
+            seen_prompts.add(prompt)
+        appended += 1
+        results.append({"ok": True, "entry": entry})
+
+    if appended:
+        write_dataset(path, existing)
+
+    return jsonify({
+        "ok": True,
+        "results": results,
+        "appended": appended,
+        "skipped_duplicates": skipped_duplicates,
+        "failed": failed,
+        "total_entries": len(existing),
+    })
 
 
 # ============================================================
