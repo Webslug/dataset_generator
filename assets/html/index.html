@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en" data-theme="pink">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dataset Generator</title>
+  <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/css/bootstrap-icons.css">
+  <link rel="stylesheet" href="/assets/css/generator.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg gen-navbar">
+    <div class="container-fluid position-relative">
+      <a class="navbar-brand" href="#" title="Dataset Generator — local ChatML dataset builder" data-bs-toggle="tooltip" data-bs-placement="bottom">
+        <i class="bi bi-database-fill-gear"></i> Dataset Generator
+      </a>
+      <span class="gen-pink-deco" aria-hidden="true">
+        <i class="bi bi-balloon-heart-fill"></i>
+        <i class="bi bi-stars"></i>
+        <i class="bi bi-gift-fill"></i>
+        <i class="bi bi-flower2"></i>
+      </span>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item d-flex align-items-center">
+            <span id="health-badge" class="badge text-bg-secondary gen-health" title="Ollama server status: checking…" data-bs-toggle="tooltip" data-bs-placement="bottom">
+              <i class="bi bi-question-circle"></i>
+            </span>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-white small mb-0" for="theme-select" title="Choose a colour theme" data-bs-toggle="tooltip" data-bs-placement="bottom">
+            <i class="bi bi-palette"></i>
+          </label>
+          <select id="theme-select" class="form-select form-select-sm" style="width:auto"
+                  title="Switch UI theme" data-bs-toggle="tooltip" data-bs-placement="bottom">
+            <option value="pink">Baby Pink</option>
+            <option value="blue">Aero Blue</option>
+            <option value="green">Dark Green</option>
+            <option value="dark">Dark Mode</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="gen-vram-item d-none" id="vram-item">
+        <div class="gen-vram" title="GPU VRAM usage (nvidia-smi)" data-bs-toggle="tooltip" data-bs-placement="bottom">
+          <div class="d-flex justify-content-between gen-vram-label">
+            <span id="vram-label"><i class="bi bi-gpu-card"></i> VRAM</span>
+            <span id="vram-text">–</span>
+          </div>
+          <div class="progress gen-vram-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div id="vram-bar" class="progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid gen-main py-4" id="generator">
+
+    <div class="row justify-content-center">
+      <div class="col-12 col-xl-10">
+        <ul class="nav nav-tabs gen-tabs" id="mainTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-generate-btn" data-bs-toggle="tab" data-bs-target="#tab-generate"
+                    type="button" role="tab" aria-controls="tab-generate" aria-selected="true">
+              <i class="bi bi-magic"></i> Generate
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-advanced-btn" data-bs-toggle="tab" data-bs-target="#tab-advanced"
+                    type="button" role="tab" aria-controls="tab-advanced" aria-selected="false">
+              <i class="bi bi-sliders"></i> Advanced Options
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-dataset-btn" data-bs-toggle="tab" data-bs-target="#tab-dataset"
+                    type="button" role="tab" aria-controls="tab-dataset" aria-selected="false">
+              <i class="bi bi-bar-chart-line"></i> Dataset Info
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tab-content" id="mainTabsContent">
+
+      <!-- ============================== GENERATE ============================== -->
+      <div class="tab-pane fade show active" id="tab-generate" role="tabpanel" aria-labelledby="tab-generate-btn">
+        <div class="row justify-content-center">
+          <div class="col-12 col-xl-10">
+            <div class="gen-card gen-tab-panel p-3 p-md-4 d-flex flex-column gap-4">
+
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <label for="template-select" class="form-label fw-semibold mb-0 me-1">Template</label>
+                <select id="template-select" class="form-select form-select-sm" style="width:auto"
+                        title="Load a saved prompt template" data-bs-toggle="tooltip">
+                  <option value="">(none)</option>
+                </select>
+                <button id="btn-template-save" class="btn btn-sm btn-outline-secondary" type="button"
+                        title="Save the current prompt/system/variables as a named template" data-bs-toggle="tooltip">
+                  <i class="bi bi-save"></i> Save as template
+                </button>
+                <button id="btn-template-delete" class="btn btn-sm btn-outline-danger" type="button"
+                        title="Delete the selected template" data-bs-toggle="tooltip">
+                  <i class="bi bi-trash"></i>
+                </button>
+                <div class="ms-auto d-flex gap-2">
+                  <button id="btn-export-settings" class="btn btn-sm btn-outline-secondary" type="button"
+                          title="Download your local settings (prompt, filename, theme) as JSON" data-bs-toggle="tooltip">
+                    <i class="bi bi-download"></i> Export settings
+                  </button>
+                  <label class="btn btn-sm btn-outline-secondary mb-0" title="Import a previously exported settings JSON file" data-bs-toggle="tooltip">
+                    <i class="bi bi-upload"></i> Import settings
+                    <input id="import-settings-file" type="file" accept="application/json" class="d-none">
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <label for="prompt-box" class="form-label fw-semibold mb-0">Prompt</label>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="list-mode">
+                    <label class="form-check-label" for="list-mode" title="Treat each line of the prompt box as a separate prompt" data-bs-toggle="tooltip">
+                      List mode (one prompt per line)
+                    </label>
+                  </div>
+                </div>
+                <textarea id="prompt-box" class="form-control form-control-lg gen-prompt" rows="8"
+                          placeholder="Enter your prompt... (use {{value}} if you're supplying template variables)"
+                          title="The prompt sent to the model — Ctrl+Enter to send" data-bs-toggle="tooltip"></textarea>
+                <div class="form-text">Tip: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> sends the prompt.</div>
+              </div>
+
+              <div>
+                <div class="d-flex gap-2">
+                  <button id="btn-send" class="btn btn-primary btn-lg flex-grow-1" title="Send prompt and append result(s) to dataset" data-bs-toggle="tooltip">
+                    <i class="bi bi-send-fill"></i> Send
+                  </button>
+                  <button id="btn-cancel" class="btn btn-outline-danger btn-lg px-4 d-none" title="Cancel the remaining runs" data-bs-toggle="tooltip">
+                    <i class="bi bi-x-octagon"></i> Cancel
+                  </button>
+                </div>
+                <div class="mt-3 d-none" id="progress-wrap">
+                  <div class="progress gen-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex flex-column gap-3">
+                <div>
+                  <label for="backend-select" class="form-label fw-semibold">Backend</label>
+                  <select id="backend-select" class="form-select form-select-lg"
+                          title="Where to send the prompt" data-bs-toggle="tooltip">
+                    <option value="ollama">Ollama (local)</option>
+                    <option value="kobold">Kobold.cpp (local)</option>
+                    <option value="openai">OpenAI-compatible (OpenRouter, LM Studio, etc.)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="filename-box" class="form-label fw-semibold">Dataset file</label>
+                  <input id="filename-box" type="text" class="form-control form-control-lg"
+                         placeholder="/path/to/dataset.json (or .jsonl)" title="Local .json/.jsonl file to append entries to" data-bs-toggle="tooltip">
+                </div>
+                <div id="ollama-model-row">
+                  <label for="model-select" class="form-label fw-semibold">Model</label>
+                  <select id="model-select" class="form-select form-select-lg" title="Ollama model to use" data-bs-toggle="tooltip">
+                    <option value="">(loading…)</option>
+                  </select>
+                </div>
+                <div id="openai-fields" class="d-none flex-column gap-3">
+                  <div>
+                    <label for="openai-base-url" class="form-label fw-semibold">Base URL</label>
+                    <input id="openai-base-url" type="text" class="form-control form-control-lg"
+                           placeholder="https://openrouter.ai/api/v1"
+                           title="OpenAI-compatible chat-completions base URL (no trailing /chat/completions)" data-bs-toggle="tooltip">
+                  </div>
+                  <div>
+                    <label for="openai-api-key" class="form-label fw-semibold">API key</label>
+                    <input id="openai-api-key" type="password" class="form-control form-control-lg"
+                           placeholder="sk-..." autocomplete="off"
+                           title="Sent as a Bearer token; stored only in this browser's local storage, never included in Export settings" data-bs-toggle="tooltip">
+                  </div>
+                  <div>
+                    <label for="openai-model" class="form-label fw-semibold">Model name</label>
+                    <input id="openai-model" type="text" class="form-control form-control-lg"
+                           placeholder="e.g. nousresearch/hermes-3-llama-3.1-405b"
+                           title="Model identifier as expected by the endpoint" data-bs-toggle="tooltip">
+                  </div>
+                </div>
+                <div>
+                  <label for="token-count" class="form-label fw-semibold">Max tokens</label>
+                  <input id="token-count" type="number" min="1" class="form-control form-control-lg" value="450"
+                         title="Maximum output tokens" data-bs-toggle="tooltip">
+                </div>
+                <div>
+                  <label for="repeat-count" class="form-label fw-semibold">Repeat</label>
+                  <input id="repeat-count" type="number" min="1" max="99" step="1" class="form-control form-control-lg" value="1"
+                         title="Send the prompt this many times in a row (1-99), appending one entry per run — ignored in list mode or when template variables are set" data-bs-toggle="tooltip">
+                </div>
+                <div class="d-flex gap-2" id="ollama-control-row">
+                  <button id="btn-ollama-start" class="btn btn-outline-success btn-lg flex-fill"
+                          title="Start the local Ollama server" data-bs-toggle="tooltip">
+                    <i class="bi bi-play-fill"></i> Start Ollama
+                  </button>
+                  <button id="btn-ollama-stop" class="btn btn-outline-danger btn-lg flex-fill"
+                          title="Stop the local Ollama server" data-bs-toggle="tooltip">
+                    <i class="bi bi-stop-fill"></i> Stop Ollama
+                  </button>
+                </div>
+              </div>
+
+              <div id="status-panel" class="gen-status d-none"></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================== ADVANCED OPTIONS ============================== -->
+      <div class="tab-pane fade" id="tab-advanced" role="tabpanel" aria-labelledby="tab-advanced-btn">
+        <div class="row justify-content-center">
+          <div class="col-12 col-xl-10">
+            <div class="gen-card gen-tab-panel p-3 p-md-4 d-flex flex-column gap-3">
+              <div>
+                <label for="system-prompt" class="form-label fw-semibold">System prompt (optional)</label>
+                <textarea id="system-prompt" class="form-control" rows="3"
+                          placeholder="e.g. You are a helpful assistant..."
+                          title="Stored alongside each entry as a top-level 'system' field, not inside messages"
+                          data-bs-toggle="tooltip"></textarea>
+              </div>
+              <div>
+                <label for="context-box" class="form-label fw-semibold">Prior conversation turns (optional, JSON)</label>
+                <textarea id="context-box" class="form-control" rows="3"
+                          placeholder='[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]'
+                          title="Prior turns prepended before the new prompt, for multi-turn entries" data-bs-toggle="tooltip"></textarea>
+              </div>
+              <div>
+                <label for="variables-box" class="form-label fw-semibold">Template variables (optional, one per line)</label>
+                <textarea id="variables-box" class="form-control" rows="3"
+                          placeholder="Claire&#10;Anna&#10;Priya"
+                          title="Each line substitutes into {{value}} in the prompt, producing one entry per line" data-bs-toggle="tooltip"></textarea>
+              </div>
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <label for="temperature" class="form-label fw-semibold">Temperature</label>
+                  <input id="temperature" type="number" min="0" max="2" step="0.05" class="form-control"
+                         title="Sampling temperature sent to the backend" data-bs-toggle="tooltip">
+                </div>
+                <div class="col-12 col-md-4">
+                  <label for="top-p" class="form-label fw-semibold">Top-p</label>
+                  <input id="top-p" type="number" min="0" max="1" step="0.05" class="form-control"
+                         title="Nucleus sampling top-p sent to the backend" data-bs-toggle="tooltip">
+                </div>
+                <div class="col-12 col-md-4">
+                  <label for="seed" class="form-label fw-semibold">Seed</label>
+                  <input id="seed" type="number" step="1" class="form-control"
+                         placeholder="random" title="Fixed seed for reproducible generation (leave blank for random)" data-bs-toggle="tooltip">
+                </div>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="allow-duplicate" checked>
+                <label class="form-check-label" for="allow-duplicate" title="Allow appending a prompt that already exists in the dataset" data-bs-toggle="tooltip">
+                  Allow duplicate prompts
+                </label>
+              </div>
+              <div>
+                <button id="btn-save-default" class="btn btn-sm btn-outline-secondary" type="button"
+                        title="Save current model/max tokens/backend/temperature/top-p as the server-side defaults" data-bs-toggle="tooltip">
+                  <i class="bi bi-floppy"></i> Save as default config
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================== DATASET INFO ============================== -->
+      <div class="tab-pane fade" id="tab-dataset" role="tabpanel" aria-labelledby="tab-dataset-btn">
+        <div class="row justify-content-center">
+          <div class="col-12 col-xl-10">
+            <div class="gen-card gen-tab-panel p-3 p-md-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h2 class="h5 mb-0"><i class="bi bi-bar-chart-line"></i> Dataset info</h2>
+                <div class="d-flex gap-2">
+                  <button id="btn-refresh-info" class="btn btn-sm btn-outline-secondary" title="Refresh dataset stats" data-bs-toggle="tooltip">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                  </button>
+                  <button id="btn-undo" class="btn btn-sm btn-outline-warning" title="Remove the last appended entry" data-bs-toggle="tooltip">
+                    <i class="bi bi-arrow-counterclockwise"></i> Undo last entry
+                  </button>
+                  <button id="btn-export-jsonl" class="btn btn-sm btn-outline-secondary" title="Write a sibling file in the other format (.json <-> .jsonl)" data-bs-toggle="tooltip">
+                    <i class="bi bi-file-earmark-arrow-down"></i> Export other format
+                  </button>
+                </div>
+              </div>
+              <div id="dataset-info-body" class="small text-body-secondary">No dataset file loaded yet.</div>
+              <ul id="dataset-preview" class="list-unstyled mt-2 mb-0 gen-preview"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="gen-toast-zone" id="toast-zone"></div>
+
+  <script src="/assets/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/generator.js"></script>
+</body>
+</html>

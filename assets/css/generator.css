@@ -1,0 +1,404 @@
+/* generator.css — styling for the dataset generator UI, layered on top of vendor bootstrap.
+   Do not edit bootstrap.min.css / bootstrap-icons.css / bootstrap.bundle.min.js. */
+
+:root {
+  --gen-primary: #ffacd5;
+  --gen-primary-dark: #ff5fa2;
+  --gen-accent: #fff5fa;
+}
+
+[data-theme="blue"] {
+  --gen-primary: #8fd0ff;
+  --gen-primary-dark: #3d8fdc;
+  --gen-accent: #eaf6ff;
+}
+
+[data-theme="green"] {
+  --gen-primary: #1b5e20;
+  --gen-primary-dark: #0d3d10;
+  --gen-accent: #e8f5e9;
+}
+
+[data-theme="dark"] {
+  --gen-primary: #6c63ff;
+  --gen-primary-dark: #4b44c4;
+  --gen-accent: #14151f;
+  --gen-surface: #1e2030;
+  --gen-text: #e7e7f2;
+  --gen-border: rgba(255, 255, 255, 0.12);
+}
+
+body {
+  background: var(--gen-accent);
+  color: var(--gen-text, inherit);
+  min-height: 100vh;
+  transition: background 0.2s ease;
+}
+
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .form-check-label,
+[data-theme="dark"] .gen-status,
+[data-theme="dark"] .gen-card,
+[data-theme="dark"] .form-text {
+  color: var(--gen-text);
+}
+
+[data-theme="dark"] .gen-tabs .nav-link {
+  color: var(--gen-text);
+  background: var(--gen-surface);
+}
+
+[data-theme="dark"] .gen-tabs .nav-link.active {
+  color: #fff;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .gen-status,
+[data-theme="dark"] .gen-card {
+  background-color: var(--gen-surface);
+  color: var(--gen-text);
+  border-color: var(--gen-border);
+}
+
+[data-theme="dark"] .gen-preview li {
+  border-color: var(--gen-border);
+}
+
+.gen-main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.gen-navbar {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gen-primary) 85%, #fff) 0%, var(--gen-primary) 45%, var(--gen-primary-dark) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 3px 8px rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.gen-navbar .navbar-brand,
+.gen-navbar .nav-link {
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Windows-Aero-style glass sheen for the Aero Blue theme — kept to a thin
+   strip along the very top edge only, so it doesn't wash out content
+   (VRAM meter, nav links) sitting in the middle of the navbar. */
+[data-theme="blue"] .gen-navbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+[data-theme="blue"] .gen-navbar .navbar-brand,
+[data-theme="blue"] .gen-navbar .nav-link {
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+/* Cute decorative icon cluster, Baby Pink theme only — bootstrap-icons has no
+   literal "rattle" or "doll" glyphs, so balloon/stars/gift/flower stand in
+   for a girly, toy-box feel. */
+.gen-pink-deco {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.75rem;
+  font-size: 1.05rem;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="pink"] .gen-pink-deco {
+  display: inline-flex;
+}
+
+.gen-pink-deco i:nth-child(1) { animation: gen-bob 2.6s ease-in-out infinite; }
+.gen-pink-deco i:nth-child(2) { animation: gen-bob 2.6s ease-in-out infinite 0.3s; }
+.gen-pink-deco i:nth-child(3) { animation: gen-bob 2.6s ease-in-out infinite 0.6s; }
+.gen-pink-deco i:nth-child(4) { animation: gen-bob 2.6s ease-in-out infinite 0.9s; }
+
+@keyframes gen-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gen-pink-deco i {
+    animation: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .gen-pink-deco {
+    display: none !important;
+  }
+}
+
+.gen-prompt {
+  border-radius: 1rem;
+  resize: vertical;
+  min-height: 14rem;
+}
+
+/* Bevelled / embossed 3D look for form controls */
+.form-control,
+.form-select {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+  background-color: #fdfdfe;
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6),
+    0 0 0 0.2rem color-mix(in srgb, var(--gen-primary) 35%, transparent);
+  border-color: var(--gen-primary);
+}
+
+.btn-lg {
+  border-radius: 1rem;
+}
+
+/* Bevelled / raised 3D look for buttons */
+.btn {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  border-width: 1px;
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gen-primary) 80%, #fff) 0%, var(--gen-primary) 55%, var(--gen-primary-dark) 100%);
+  border-color: var(--gen-primary-dark);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: linear-gradient(180deg, var(--gen-primary) 0%, var(--gen-primary-dark) 100%);
+  border-color: var(--gen-primary-dark);
+}
+
+.gen-status {
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tab bar */
+.gen-tabs {
+  border-bottom: 2px solid color-mix(in srgb, var(--gen-primary) 30%, transparent);
+  gap: 0.25rem;
+  margin-bottom: 0;
+}
+
+.tab-content {
+  margin-top: 0;
+}
+
+.gen-tabs .nav-link {
+  border: 1px solid transparent;
+  border-radius: 0.75rem 0.75rem 0 0;
+  color: color-mix(in srgb, var(--gen-primary-dark) 80%, #000 20%);
+  font-weight: 600;
+  padding: 0.6rem 1.25rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--gen-accent) 60%, #fff 40%);
+}
+
+.gen-tabs .nav-link:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--gen-primary-dark);
+}
+
+.gen-tabs .nav-link.active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gen-primary) 85%, #fff) 0%, var(--gen-primary) 60%, var(--gen-primary-dark) 100%);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  border-color: var(--gen-primary-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Tab content panel — bevelled container that visually continues from the
+   active tab, so the controls below the tab bar aren't floating loose. */
+.gen-tab-panel {
+  border-top: 3px solid var(--gen-primary);
+  border-radius: 0 0.75rem 0.75rem 0.75rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.05),
+    0 3px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Faint corner watermark, Baby Pink theme only */
+[data-theme="pink"] .gen-tab-panel::after {
+  content: "\f3ce"; /* bi-flower2 */
+  font-family: "bootstrap-icons";
+  position: absolute;
+  bottom: -1.25rem;
+  right: -0.5rem;
+  font-size: 7rem;
+  color: var(--gen-primary);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.gen-health {
+  border-radius: 50%;
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.gen-health.is-up {
+  background-color: #2e7d32 !important;
+}
+
+.gen-health.is-down {
+  background-color: #c62828 !important;
+}
+
+.gen-progress {
+  height: 0.75rem;
+  border-radius: 1rem;
+}
+
+.gen-vram-item {
+  width: 11rem;
+  pointer-events: none;
+}
+
+.gen-vram-item .gen-vram {
+  pointer-events: auto;
+}
+
+.gen-vram {
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .gen-vram-item {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (max-width: 991.98px) {
+  .gen-vram-item {
+    margin: 0.5rem auto 0;
+  }
+}
+
+.gen-vram-label {
+  color: #fff;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.2rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.gen-vram-bar {
+  height: 0.6rem;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.gen-vram-bar .progress-bar {
+  background-color: #43a047;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.gen-vram-bar .progress-bar.is-warn {
+  background-color: #f9a825;
+}
+
+.gen-vram-bar .progress-bar.is-hot {
+  background-color: #c62828;
+}
+
+.gen-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.gen-preview li {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+  font-size: 0.82rem;
+}
+
+.gen-preview li:last-child {
+  border-bottom: none;
+}
+
+.gen-toast-zone {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+}
+
+@media (max-width: 576px) {
+  .gen-main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .gen-prompt {
+    min-height: 10rem;
+  }
+
+  .btn-lg {
+    font-size: 1rem;
+  }
+}

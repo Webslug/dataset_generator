@@ -1,0 +1,31 @@
+# Secrets and local credentials
+.env
+*.secret
+
+.claude/
+.codex/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor / OS
+*~
+.DS_Store
+.idea/
+.vscode/
+
+# Local, machine-specific generated files — recreated automatically on
+# first use (see README's "Configuration files" section)
+config.json
+templates.json
+
+# Personal/example dataset output and leftover exports — not meant for
+# the public repo
+test.json
+templates/dataset-generator-settings.json
+
+AGENTS.md
+push.sh
